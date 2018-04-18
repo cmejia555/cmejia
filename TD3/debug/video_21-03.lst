@@ -1,0 +1,24 @@
+     1                                  ; Mostrar en pantalla 25 lineas de caracteres. La linea superior
+     2                                  ; debe contener letras 'A', la segunda linea letras 'B' y asi sucesivamente
+     3                                  ; hasta la letra 'Y'.
+     4                                  ; Registros usados:
+     5                                  ;    CL = Fila, CH = Columna, SI = Puntero, BL = Letra a mostrar
+     6                                        ORG 0x8000
+     7 00000000 B800B8                        MOV AX, 0xB800 
+     8 00000003 8EC0                          MOV ES, AX
+     9 00000005 B341                          MOV BL, "A" ; Caracter
+    10 00000007 B100                          MOV CL, 0   ; Fila
+    11 00000009 BE0000                        MOV SI, 0   ; Puntero
+    12                                  CICLO_EXTERNO:
+    13 0000000C B500                          MOV CH, 0   ; Columna
+    14                                  CICLO_INTERNO:
+    15 0000000E 26881C                        MOV [ES:SI], BL  ; Escribo en pantalla
+    16 00000011 83C602                        ADD SI, 2  ; Incremento el puntero
+    17 00000014 FEC5                          INC CH     ; Incremento columna
+    18 00000016 80FD50                        CMP CH, 80 
+    19 00000019 75F3                          JNE CICLO_INTERNO
+    20 0000001B FEC1                          INC CL    ; Incremento la fila
+    21 0000001D FEC3                          INC BL    ; Incremento el caracter
+    22 0000001F 80F919                        CMP CL, 25
+    23 00000022 75E8                          JNE CICLO_EXTERNO
+    24 00000024 EBFE                          JMP $
