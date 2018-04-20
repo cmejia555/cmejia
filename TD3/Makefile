@@ -5,7 +5,7 @@
 # Author: Matias Silveiro
 
 # Project name
-PROJECT = video_21-03
+PROJECT = video_rom64_28-03
 
 # Assembler source files
 FILES = $(PROJECT).asm
