@@ -8,13 +8,14 @@
 inicio:
       MOV AX, 0xB800 
       MOV ES, AX
+	mov BH, 7
       MOV BL, "A" ; Caracter
       MOV CL, 0   ; Fila
       MOV SI, 0   ; Puntero
 CICLO_EXTERNO:
       MOV CH, 0   ; Columna
 CICLO_INTERNO:
-      MOV [ES:SI], BL  ; Escribo en pantalla
+      MOV [ES:SI], BX  ; Escribo en pantalla
       ADD SI, 2  ; Incremento el puntero
       INC CH     ; Incremento columna
       CMP CH, 80 
