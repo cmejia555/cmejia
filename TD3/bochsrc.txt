@@ -28,7 +28,7 @@ private_colormap: enabled=0
 clock: sync=slowdown, time0=local, rtc_sync=0
 # no cmosimage
 # no loader
-log: debug/debugger.log
+log: debug/bochsout.txt
 logprefix: %t%e%d
 panic: action=ask
 error: action=report
