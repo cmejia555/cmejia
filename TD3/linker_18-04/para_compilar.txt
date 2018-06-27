@@ -1,0 +1,16 @@
+
+
+nasm -f bin init_16.s -o init_16.bin
+nasm -f bin reset_vect.s -o reset_vect.bin
+
+
+
+
+nasm -f elf32 main.asm -o main.elf
+
+
+
+ld -z max-page-size=0x01000 --oformat=binary -m elf_i386 -T mirom2.lds 
+main.elf -o mirom.bin
+
+

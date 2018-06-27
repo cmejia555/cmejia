@@ -64,8 +64,9 @@ imagen_idtr:
  
      dw  IDT_LEN -1     ;Límite IDT (16 bits)
      dd  0xf0000 + IDT  ;Base IDT (32 bits)
-   
-BUFFER_DOBLE_OFFS EQU 0x20000
+
+DIR_PAGINAS EQU 0x20000     
+BUFFER_DOBLE_OFFS EQU DIR_PAGINAS + 0x1000
 
 ; El orden queda little-endian para usar menos instrucciones, ya que 
 ; los procesadores Intel usan little-endian.
@@ -78,6 +79,7 @@ LONG_ESTRUCTURA_POR_LETRA EQU OFFS_DELTAY+2
 VARS_LETRAS equ BUFFER_DOBLE_OFFS+2*CANT_FILAS*COLS_POR_FILA
 semilla equ VARS_LETRAS+CANT_LETRAS*LONG_ESTRUCTURA_POR_LETRA
 FLAG_INT equ semilla + 4
+
 BUFFER_VIDEO equ 0xb8000
 
 pasaje_aMP:     
@@ -164,7 +166,43 @@ inicio_32:
      out 0A1h, al           ;11111111 -> Todas las interrupciones deshabilitadas.
      
      lidt [cs:imagen_idtr]  ;Cargar el registro IDTR.
-      
+
+     ;Activo paginacion
+     ;Pongo todo el directorio en cero
+     cld
+     mov edi, DIR_PAGINAS
+     mov ecx, 1024
+     xor eax, eax
+     rep stosd
+     ;Cargo la entrada para acceder a la memoria de video
+     mov eax, 0x83
+     mov edi, DIR_PAGINAS
+     mov [edi], eax
+     ;Cargo la entrada para acceder a la ROM
+     mov eax, 0xFFC00081
+     mov [edi+(1024-1)*4], eax
+     ;Activar PSE
+     mov eax, cr4
+     or  eax, 0x10
+     mov cr4, eax
+     ;Cargo CR3
+     mov eax, DIR_PAGINAS
+     mov cr3, eax
+     ;Habilito Paginacion
+     mov eax, cr0
+     or  eax, 0x80000000
+     mov cr0, eax
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
      rdtsc; EDX:EAX 
      mov [semilla], eax
 ;Inicializar el array de estructuras correspondiente a cada letra.
@@ -278,4 +316,3 @@ reset:
      jmp inicio
      
      times 0x10 - ($ -reset) db 0      ;Completar hasta 64 KB.
-

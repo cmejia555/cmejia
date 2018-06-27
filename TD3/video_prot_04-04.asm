@@ -45,7 +45,7 @@ im_gdtr:
      
 pasaje_aMP:
 	xchg bx,bx      
-	cli
+	cli				; deshabilito interrupciones
 	lgdt[cs:im_gdtr]		; cargo la gdt
 
 	mov eax, cr0			; habilito modo protegido modificando bit 0 de CR0
