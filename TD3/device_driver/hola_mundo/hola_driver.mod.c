@@ -24,6 +24,9 @@ __used
 __attribute__((section("__versions"))) = {
 	{ 0x310e94b8, __VMLINUX_SYMBOL_STR(module_layout) },
 	{ 0x7485e15e, __VMLINUX_SYMBOL_STR(unregister_chrdev_region) },
+	{ 0x8b1087b6, __VMLINUX_SYMBOL_STR(cdev_del) },
+	{ 0x43de666e, __VMLINUX_SYMBOL_STR(class_destroy) },
+	{ 0xd02d956, __VMLINUX_SYMBOL_STR(device_destroy) },
 	{ 0xf601328f, __VMLINUX_SYMBOL_STR(device_create) },
 	{ 0xb0c459e7, __VMLINUX_SYMBOL_STR(__class_create) },
 	{ 0x7838fb12, __VMLINUX_SYMBOL_STR(cdev_add) },
