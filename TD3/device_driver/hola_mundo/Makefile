@@ -6,4 +6,4 @@ clean:
 	make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -C $(KERNEL_DIR) M=$(PWD) clean
 
 copy:
-	scp hola_driver.ko debian@192.168.7.2:/home/debian/Desktop/Codigos/
+	scp hola_driver.ko debian@192.168.7.2:/home/debian/Desktop/Drivers/
