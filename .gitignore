@@ -34,3 +34,4 @@
 TD3/debug/*
 
 TD3/device_driver/.*
+TD3/device_driver/.temp_versions/*
