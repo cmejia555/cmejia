@@ -32,3 +32,5 @@
 *.dSYM/
 *.su
 TD3/debug/*
+
+TD3/device_driver/.*
