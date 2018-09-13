@@ -8,10 +8,11 @@
 #include <linux/fs.h>
 #include <linux/cdev.h> 
 #include <linux/errno.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #define FIRST_MINOR	0
 #define NUMBER_DEV	1
+#define MAX_SIZE_STRING 200
 
 static int hello_init(void);
 static void hello_exit(void);

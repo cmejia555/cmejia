@@ -17,11 +17,14 @@ static struct file_operations toUpper_ops = {
 	.open = mi_open,
 	.read = mi_read,
 	.write = mi_write,
+	//.realese = mi_close,
 };
 
 static struct class *pClase;
 static struct device *pDeviceSys;
 
+static char *string;
+static unsigned long len_string = 0;
 
 module_init(hello_init);
 module_exit(hello_exit);
@@ -29,7 +32,10 @@ module_exit(hello_exit);
 
 static int hello_init(void) {
 	int error;
+	int i;
+
 	printk(KERN_ALERT "Configurando el driver\n");
+	
 	error = alloc_chrdev_region(&mi_dispo, FIRST_MINOR, NUMBER_DEV, "first_driver_TD3"); // registra una serie de char device
 	if(error < 0) {
 		printk(KERN_ALERT "ERROR function alloc_chrdev_region()\n");
@@ -57,15 +63,27 @@ static int hello_init(void) {
 	pClase = class_create(THIS_MODULE, "HOLA_TD3"); // crea una clase para ser usado en device_create
 	pDeviceSys = device_create(pClase, NULL, mi_dispo, NULL, "to_upper"); // crea un device y lo registra en el system file
 
+	string = kmalloc(MAX_SIZE_STRING, GFP_KERNEL);
+	if (string == NULL) {
+		printk(KERN_ALERT "ERROR en kmalloc()");
+		return -1;
+	}
+
+	for(i = 0; i < MAX_SIZE_STRING; i++)
+		*(string + i) = 0; 
+
 	return 0;
 }
 
 static void hello_exit(void) {
 	printk(KERN_ALERT "Liberando recursos\n");
+
+	kfree(string);
 	device_destroy(pClase, mi_dispo);
 	class_destroy(pClase);
 	cdev_del(pCdev);
 	unregister_chrdev_region(mi_dispo, NUMBER_DEV); // libera los numeros mayor y menor
+
 }
 
 
@@ -75,10 +93,32 @@ int mi_open(struct inode * node, struct file *fd) {
 }
 
 ssize_t mi_write(struct file *fd, const char __user *userBuff, size_t len, loff_t *offset) {
-	return 0;
+	int i;
+
+	if(len >= MAX_SIZE_STRING) { // se trunca la memoria (-1 por el \0 final)
+		len = MAX_SIZE_STRING - 1;
+	}
+	len_string = copy_from_user(string, userBuff, len);
+	len_string = len ++;
+	*(string + len) = 0;
+
+	for(i = 0; i < len; i++) {
+		if( *(string + i) >= 'a' && *(string + i) <= 'z') {
+			*(string + i) -= 'a' - 'A';
+		}
+	}
+	*(string + i) = 0;
+
+	return len;
 }
 
 ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offset) {
-	return 0;
+	int cant;
+
+	if(len < len_string)
+		return ENOMEM;
+	cant = copy_to_user(userBuff, string, len_string);
+
+	return len_string;
 }
 
