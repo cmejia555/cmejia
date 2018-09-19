@@ -24,7 +24,7 @@ static struct class *pClase;
 static struct device *pDeviceSys;
 
 static char *string;
-static unsigned long len_string = 0;
+static unsigned long sizeString = 0;
 
 module_init(hello_init);
 module_exit(hello_exit);
@@ -65,7 +65,7 @@ static int hello_init(void) {
 
 	string = kmalloc(MAX_SIZE_STRING, GFP_KERNEL);
 	if (string == NULL) {
-		printk(KERN_ALERT "ERROR en kmalloc()");
+		printk(KERN_ALERT "ERROR en kmalloc()\n");
 		return -1;
 	}
 
@@ -94,31 +94,41 @@ int mi_open(struct inode * node, struct file *fd) {
 
 ssize_t mi_write(struct file *fd, const char __user *userBuff, size_t len, loff_t *offset) {
 	int i;
+	unsigned long bytesNotCopy = 0;
 
 	if(len >= MAX_SIZE_STRING) { // se trunca la memoria (-1 por el \0 final)
 		len = MAX_SIZE_STRING - 1;
 	}
-	len_string = copy_from_user(string, userBuff, len);
-	len_string = len ++;
-	*(string + len) = 0;
+	bytesNotCopy = copy_from_user(string, userBuff, len);
+	if(bytesNotCopy) { // Si es != 0 hubo error en la copia
+		printk(KERN_ALERT "Bytes sin copiar a buffer de kernerl = %ld\n", bytesNotCopy);
+		len -= bytesNotCopy; // resto a len los bytes que no se copiaron
+	}
+	sizeString = len; // Guarda el tamano copiado
 
+	/* Se convierte el string a mayusculas: toUpper */
 	for(i = 0; i < len; i++) {
 		if( *(string + i) >= 'a' && *(string + i) <= 'z') {
 			*(string + i) -= 'a' - 'A';
 		}
 	}
-	*(string + i) = 0;
+	*(string + i) = 0; // Agrega fin de cadena
 
 	return len;
 }
 
 ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offset) {
-	int cant;
+	unsigned long bytesNotCopy;
 
-	if(len < len_string)
+	if(len < sizeString)
 		return ENOMEM;
-	cant = copy_to_user(userBuff, string, len_string);
 
-	return len_string;
+	bytesNotCopy = copy_to_user(userBuff, string, sizeString + 1); // +1 por el fin de cadena
+	if(bytesNotCopy) { // Si es != 0 hubo error en la copia
+		printk(KERN_ALERT "Bytes sin copiar a buffer de usuario = %ld\n", bytesNotCopy);
+	}
+
+	return (sizeString - bytesNotCopy);
 }
+
 
