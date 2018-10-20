@@ -26,22 +26,40 @@ static struct device *pDeviceSys;
 static char *string;
 static unsigned long sizeString = 0;
 
+
+static struct of_device_id i2c_of_match[] = {
+	{
+		.compatible = "i2c_driver_td3,omap4-i2c",
+	},
+	{},
+};
+
+MODULE_DEVICE_TABLE(of, i2c_of_match);
+static struct platform_driver platDrv = {
+	.probe = mi_probe,
+	.remove = mi_remove,
+	.driver = {
+		.name = "TD3_I2C",
+		.of_match_table = of_match_ptr(i2c_of_match),
+	}
+};
+
 module_init(hello_init);
 module_exit(hello_exit);
-
 
 static int hello_init(void) {
 	int error;
 	int i;
 
 	printk(KERN_ALERT "Configurando el driver\n");
-	
+
 	error = alloc_chrdev_region(&mi_dispo, FIRST_MINOR, NUMBER_DEV, "first_driver_TD3"); // registra una serie de char device
 	if(error < 0) {
 		printk(KERN_ALERT "ERROR function alloc_chrdev_region()\n");
 		return -1;
 	}
 	printk(KERN_ALERT "Numero mayor asignado = %d\n", MAJOR(mi_dispo));
+	printk(KERN_ALERT "Numero mayor asignado = %d\n", MINOR(mi_dispo));
 
 	pCdev = cdev_alloc(); // asigna una estructura cdev
 	if(pCdev == NULL) {
@@ -70,7 +88,9 @@ static int hello_init(void) {
 	}
 
 	for(i = 0; i < MAX_SIZE_STRING; i++)
-		*(string + i) = 0; 
+		*(string + i) = 0;
+
+	platform_driver_register(&platDrv);
 
 	return 0;
 }
@@ -78,6 +98,7 @@ static int hello_init(void) {
 static void hello_exit(void) {
 	printk(KERN_ALERT "Liberando recursos\n");
 
+	platform_driver_unregister(&platDrv);
 	kfree(string);
 	device_destroy(pClase, mi_dispo);
 	class_destroy(pClase);
@@ -132,3 +153,50 @@ ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offs
 }
 
 
+void __iomem *map;
+static int mi_probe(struct platform_device *drv) {
+	printk(KERN_ALERT "Dispositivo conectado\n");
+
+	// Configuracion del clock del i2c
+	chip_config_register(CM_PER_I2C2_CLKCTRL, I2C2_CLK_EN);
+	// Configuracion del pinmux del i2c
+	chip_config_register(CONTROL_MODULE_I2C2_SCL, I2C2_PINMUX_EN);
+	chip_config_register(CONTROL_MODULE_I2C2_SDA, I2C2_PINMUX_EN);
+
+	map = of_iomap((drv->dev).of_node, 0);
+	printk(KERN_ALERT "Direccion I2C %p\n",(void *)map);
+	return 0;
+}
+
+static int mi_remove(struct platform_device *drv) {
+	printk(KERN_ALERT "Dispositivo desconectado\n");
+	iounmap(map);
+	return 0;
+}
+
+
+void chip_config_register(u32 addr, u32 value) {
+	void * map = ioremap(addr, 1);
+	printk(KERN_ALERT "Address config: = %p\n",map);
+
+	iowrite32(value, map);
+
+	iounmap(map);
+	//value = ioread32(map);
+	//printk(KERN_ALERT "Valor registro = %d", value);
+
+	return;
+}
+
+// void i2c_clk_enable(unsigned int addr) {
+// 	unsigned int value;
+// 	void *cmper = ioremap(addr, 1); // obtengo la zona de memoria de addr
+// 	printk(KERN_ALERT "Direccion CM_PER %p\n",cmper);
+//
+// 	iowrite32(I2C2_CLK_EN, cmper); // escribo el valor en el registro
+//
+// 	value = ioread32(cmper);
+// 	printk(KERN_ALERT "Valor registro = %d", value);
+//
+//   return;
+// }
