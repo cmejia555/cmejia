@@ -21,4 +21,6 @@ void main(void)
 	size = read(fd, string_rcv, 30);
 	printf("str_rcv = %s, size = %d\n", string_rcv, size);
 
+	close(fd);
+
 }

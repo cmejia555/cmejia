@@ -15,9 +15,9 @@ static struct cdev *pCdev;
 static struct file_operations toUpper_ops = {
 	.owner = THIS_MODULE,
 	.open = mi_open,
+	.release = mi_close,
 	.read = mi_read,
 	.write = mi_write,
-	//.realese = mi_close,
 };
 
 static struct class *pClase;
@@ -43,6 +43,9 @@ static struct platform_driver platDrv = {
 		.of_match_table = of_match_ptr(i2c_of_match),
 	}
 };
+
+static void __iomem *map;			// zona de memoria del i2c
+static int virq;							// i2c virtual irq
 
 module_init(hello_init);
 module_exit(hello_exit);
@@ -110,6 +113,13 @@ static void hello_exit(void) {
 
 int mi_open(struct inode * node, struct file *fd) {
 	printk(KERN_ALERT "OPEN success\n");
+	//printk(KERN_ALERT "Direccion I2C %p\n",(void *)map);
+	i2c_init(map);
+	return 0;
+}
+
+int mi_close(struct inode * node, struct file *fd) {
+	printk(KERN_ALERT "CLOSE success\n");
 	return 0;
 }
 
@@ -142,7 +152,7 @@ ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offs
 	unsigned long bytesNotCopy;
 
 	if(len < sizeString)
-		return ENOMEM;
+		return -ENOMEM;
 
 	bytesNotCopy = copy_to_user(userBuff, string, sizeString + 1); // +1 por el fin de cadena
 	if(bytesNotCopy) { // Si es != 0 hubo error en la copia
@@ -152,8 +162,6 @@ ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offs
 	return (sizeString - bytesNotCopy);
 }
 
-
-void __iomem *map;
 static int mi_probe(struct platform_device *drv) {
 	printk(KERN_ALERT "Dispositivo conectado\n");
 
@@ -165,29 +173,61 @@ static int mi_probe(struct platform_device *drv) {
 
 	map = of_iomap((drv->dev).of_node, 0);
 	printk(KERN_ALERT "Direccion I2C %p\n",(void *)map);
+
+	virq = platform_get_irq(drv, 0);
+	if(virq < 0) {
+		printk(KERN_ALERT "ERROR virq\n");
+		return virq;
+	}
+	if( request_irq(virq, mi_handler, IRQF_TRIGGER_RISING, drv->name, NULL) < 0 ) {
+		printk(KERN_ALERT "ERROR alloc mi_handler\n");
+		return -1;
+	}
+	printk(KERN_ALERT "VIRQ = %d\n", virq);
+
+
 	return 0;
 }
 
 static int mi_remove(struct platform_device *drv) {
 	printk(KERN_ALERT "Dispositivo desconectado\n");
+	free_irq(virq, NULL);
 	iounmap(map);
 	return 0;
 }
 
 
 void chip_config_register(u32 addr, u32 value) {
-	void * map = ioremap(addr, 1);
-	printk(KERN_ALERT "Address config: = %p\n",map);
+	void * mappping = ioremap(addr, 1);
+	printk(KERN_ALERT "Address config: = %p\n",mappping);
 
-	iowrite32(value, map);
+	iowrite32(value, mappping);
 
-	iounmap(map);
+	iounmap(mappping);
 	//value = ioread32(map);
 	//printk(KERN_ALERT "Valor registro = %d", value);
 
 	return;
 }
 
+void i2c_init(void __iomem * addr) {
+	//u32 value;
+	printk(KERN_ALERT "Configuracion Init\n");
+	iowrite32(I2C_DISABLE, addr + I2C_REG_CON);
+	iowrite32(I2C_PRESCALE, addr + I2C_REG_PSC);
+	iowrite32(I2C_LOW_TIME, addr + I2C_REG_SCLL);
+	iowrite32(I2C_HIGH_TIME, addr + I2C_REG_SCLH);
+	iowrite32(I2C_OWN_ADDRESS, addr + I2C_REG_OA);
+	iowrite32(0, addr + I2C_REG_SYSC);
+	iowrite32(I2C_SLAVE_ADDRESS, addr + I2C_REG_SA);
+	iowrite32(I2C_ENABLE, addr + I2C_REG_CON);
+
+	//msleep(10);
+	//value = ioread32(addr + I2C_REG_CON);
+	//printk(KERN_ALERT "Valor registro = %d", value);
+	return;
+
+}
 // void i2c_clk_enable(unsigned int addr) {
 // 	unsigned int value;
 // 	void *cmper = ioremap(addr, 1); // obtengo la zona de memoria de addr
@@ -200,3 +240,8 @@ void chip_config_register(u32 addr, u32 value) {
 //
 //   return;
 // }
+
+irqreturn_t mi_handler(int irq, void *dev_id){
+	printk(KERN_ALERT "IRQ!\n");
+	return IRQ_HANDLED;
+}
