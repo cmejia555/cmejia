@@ -37,5 +37,6 @@ void chip_config_register(u32 addr, u32 value);
 void i2c_init(void __iomem * addr);
 
 irqreturn_t mi_handler(int irq, void *dev_id);
-
+uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size);
+void i2c_set_interrupt(uint8_t irq);
 #endif

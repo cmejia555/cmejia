@@ -14,6 +14,7 @@ void main(void)
 	char string_rcv[30];
 
 	fd = open("/dev/to_upper", O_RDWR);
+	//sleep(2);
 
 	size = write(fd, string_env, strlen(string_env));
 	printf("str_env = %s, size = %d\n", string_env, size);

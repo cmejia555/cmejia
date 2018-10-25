@@ -11,7 +11,7 @@
 #define CONF_I2C2_SCL_OFFSET  0x97C // uart1_rtsn
 #define CONTROL_MODULE_I2C2_SDA       CONTROL_MODULE_BASE | CONF_I2C2_SDA_OFFSET
 #define CONTROL_MODULE_I2C2_SCL       CONTROL_MODULE_BASE | CONF_I2C2_SCL_OFFSET
-#define I2C2_PINMUX_EN        (3<<0)
+#define I2C2_PINMUX_EN        0x33//(3<<0)
 // abilitar pull up de ser necesario
 
 #define I2C_REG_CON         0xA4
@@ -21,15 +21,31 @@
 #define I2C_REG_OA          0xA8
 #define I2C_REG_SYSC        0x10
 #define I2C_REG_SA          0xAC
-//#define I2C_CON
+
+#define I2C_REG_IRQENABLE_SET          0x2C
+#define I2C_REG_CNT         0x98
+#define I2C_REG_DATA        0x9C
+#define I2C_REG_IRQSTATUS_RAW 0x24
 
 #define I2C_DISABLE       0x00 // i2c moduele not enable
 #define I2C_ENABLE        0x8000 // i2c module enable
-#define I2C_PRESCALE      0x03 // divide by 4
-#define I2C_LOW_TIME      0x05 // low time = (value + 7) * ICLK
-#define I2C_HIGH_TIME     0x07 // high time = (value + 5) * ICLK
+#define I2C_PRESCALE      0x0B // divide by 4 B0
+#define I2C_LOW_TIME      0x0D // low time = (value + 7) * ICLK B4
+#define I2C_HIGH_TIME     0x0F // high time = (value + 5) * ICLK B8
 #define I2C_OWN_ADDRESS   0x36
-#define I2C_SLAVE_ADDRESS 0x40
+#define I2C_SLAVE_ADDRESS 0x49
+
+
+#define I2C_CON_MST       (1<<10)
+#define I2C_CON_TRX       (1<<9)
+#define I2C_MASTER_RECEIVER   0x8400
+#define I2C_MASTER_TRANSMITTER   0x8600
+#define I2C_CON_STT       (1<<0) // bit start set
+
+#define I2C_INIT_TX       (1<<0)
+#define I2C_IRQ_SET     ((1 << 6) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0))
+
+#define I2C_IRQ_RRDY    (1 << 3)
 
 typedef struct {
   //u32 RESERVED[4];

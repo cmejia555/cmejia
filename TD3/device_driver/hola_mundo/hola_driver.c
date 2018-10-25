@@ -45,7 +45,8 @@ static struct platform_driver platDrv = {
 };
 
 static void __iomem *map;			// zona de memoria del i2c
-static int virq;							// i2c virtual irq
+//static int virq;							// i2c virtual irq
+static uint8_t i2c_buff[2];
 
 module_init(hello_init);
 module_exit(hello_exit);
@@ -158,7 +159,7 @@ ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offs
 	if(bytesNotCopy) { // Si es != 0 hubo error en la copia
 		printk(KERN_ALERT "Bytes sin copiar a buffer de usuario = %ld\n", bytesNotCopy);
 	}
-
+	i2c_master_read(map, i2c_buff, 2);
 	return (sizeString - bytesNotCopy);
 }
 
@@ -174,24 +175,23 @@ static int mi_probe(struct platform_device *drv) {
 	map = of_iomap((drv->dev).of_node, 0);
 	printk(KERN_ALERT "Direccion I2C %p\n",(void *)map);
 
-	virq = platform_get_irq(drv, 0);
-	if(virq < 0) {
-		printk(KERN_ALERT "ERROR virq\n");
-		return virq;
-	}
-	if( request_irq(virq, mi_handler, IRQF_TRIGGER_RISING, drv->name, NULL) < 0 ) {
-		printk(KERN_ALERT "ERROR alloc mi_handler\n");
-		return -1;
-	}
-	printk(KERN_ALERT "VIRQ = %d\n", virq);
-
+	// virq = platform_get_irq(drv, 0);
+	// if(virq < 0) {
+	// 	printk(KERN_ALERT "ERROR virq\n");
+	// 	return virq;
+	// }
+	// if( request_irq(virq, mi_handler, IRQF_TRIGGER_RISING, drv->name, NULL) < 0 ) {
+	// 	printk(KERN_ALERT "ERROR alloc mi_handler\n");
+	// 	return -1;
+	// }
+	// printk(KERN_ALERT "VIRQ = %d\n", virq);
 
 	return 0;
 }
 
 static int mi_remove(struct platform_device *drv) {
 	printk(KERN_ALERT "Dispositivo desconectado\n");
-	free_irq(virq, NULL);
+	//free_irq(virq, NULL);
 	iounmap(map);
 	return 0;
 }
@@ -218,15 +218,15 @@ void i2c_init(void __iomem * addr) {
 	iowrite32(I2C_LOW_TIME, addr + I2C_REG_SCLL);
 	iowrite32(I2C_HIGH_TIME, addr + I2C_REG_SCLH);
 	iowrite32(I2C_OWN_ADDRESS, addr + I2C_REG_OA);
-	iowrite32(0, addr + I2C_REG_SYSC);
+	iowrite32((1<<3), addr + I2C_REG_SYSC); // 0x308
 	iowrite32(I2C_SLAVE_ADDRESS, addr + I2C_REG_SA);
-	iowrite32(I2C_ENABLE, addr + I2C_REG_CON);
+	//iowrite32(I2C_ENABLE, addr + I2C_REG_CON);
+	iowrite32(I2C_MASTER_RECEIVER, addr + I2C_REG_CON);
 
-	//msleep(10);
+	msleep(10);
 	//value = ioread32(addr + I2C_REG_CON);
 	//printk(KERN_ALERT "Valor registro = %d", value);
 	return;
-
 }
 // void i2c_clk_enable(unsigned int addr) {
 // 	unsigned int value;
@@ -241,7 +241,57 @@ void i2c_init(void __iomem * addr) {
 //   return;
 // }
 
-irqreturn_t mi_handler(int irq, void *dev_id){
+void i2c_set_interrupt(uint8_t irq) {
+	iowrite32(I2C_IRQ_SET, map + I2C_REG_IRQENABLE_SET);
+}
+
+uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size)
+{
+	int fla = 0;
+	int i;
+	u32 value;
+	u32 val[10];
+	iowrite32(size, addr + I2C_REG_CNT);
+	//iowrite32( (0x36 << 1) | 0x00, addr + I2C_REG_DATA);
+	i2c_set_interrupt(0);
+
+	value = ioread32(addr + I2C_REG_CON);
+	value |= (I2C_INIT_TX);
+	//iowrite32(I2C_MASTER_RECEIVER, addr + I2C_REG_CON);
+	iowrite32(value, addr + I2C_REG_CON);
+	//msleep(1);
+	value = ioread32(addr + I2C_REG_CON);
+	printk(KERN_ALERT "CON = %d\n", value);
+
+	while (fla < size) {
+		for(i = 0; i < 100; i++) {
+			if( (i < 100) && (ioread32(addr + I2C_REG_IRQSTATUS_RAW) & I2C_IRQ_RRDY) ) {
+				val[fla] = ioread32(addr + I2C_REG_DATA);
+				break;
+			}
+			if(i >= 100) {
+				printk(KERN_ALERT "No se leyeron datos\n");
+				return 1;
+			}
+			msleep(1);
+		}
+		printk(KERN_ALERT "Datos %d\n", fla);
+		fla++;
+	}
+
+	//iowrite32(0x10, addr + I2C_REG_DATA);
+	//value = ioread32(addr + I2C_REG_DATA);
+	printk(KERN_ALERT "VALUE %d\n", val[0]);
+	printk(KERN_ALERT "VALUE %d\n", val[1]);
+	//iowrite32(I2C_MASTER_RECEIVER, addr + I2C_REG_CON);
+	msleep(1);
+	//fla++;
+	/* code */
+	return 0;
+
+}
+
+irqreturn_t mi_handler(int irq, void *dev_id) {
 	printk(KERN_ALERT "IRQ!\n");
 	return IRQ_HANDLED;
 }
