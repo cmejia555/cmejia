@@ -26,6 +26,9 @@
 #define I2C_REG_CNT         0x98
 #define I2C_REG_DATA        0x9C
 #define I2C_REG_IRQSTATUS_RAW 0x24
+#define I2C_REG_IRQSTATUS 0x28
+
+#define I2C_CLEAR_RRDY    (1 << 3)
 
 #define I2C_DISABLE       0x00 // i2c moduele not enable
 #define I2C_ENABLE        0x8000 // i2c module enable
@@ -38,7 +41,7 @@
 
 #define I2C_CON_MST       (1<<10)
 #define I2C_CON_TRX       (1<<9)
-#define I2C_MASTER_RECEIVER   0x8400
+#define I2C_MASTER_RECEIVER   0x8401
 #define I2C_MASTER_TRANSMITTER   0x8600
 #define I2C_CON_STT       (1<<0) // bit start set
 
@@ -46,6 +49,10 @@
 #define I2C_IRQ_SET     ((1 << 6) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0))
 
 #define I2C_IRQ_RRDY    (1 << 3)
+
+#define I2C_REG_BUFF 0x94
+#define I2C_CLEAR_FIFO  (1 << 14)
+
 
 typedef struct {
   //u32 RESERVED[4];

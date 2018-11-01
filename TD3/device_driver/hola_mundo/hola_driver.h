@@ -38,5 +38,7 @@ void i2c_init(void __iomem * addr);
 
 irqreturn_t mi_handler(int irq, void *dev_id);
 uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size);
-void i2c_set_interrupt(uint8_t irq);
+void i2c_set_interrupt(uint32_t irq);
+void i2c_clear_irq(void __iomem * addr, u32 irq);
+uint8_t i2c_read_data(void __iomem * addr);
 #endif

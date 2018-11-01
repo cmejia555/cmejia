@@ -35,6 +35,8 @@ static struct of_device_id i2c_of_match[] = {
 };
 
 MODULE_DEVICE_TABLE(of, i2c_of_match);
+static DECLARE_WAIT_QUEUE_HEAD(mi_queue);
+static int fla_isr;
 static struct platform_driver platDrv = {
 	.probe = mi_probe,
 	.remove = mi_remove,
@@ -45,8 +47,9 @@ static struct platform_driver platDrv = {
 };
 
 static void __iomem *map;			// zona de memoria del i2c
-//static int virq;							// i2c virtual irq
+static int virq;							// i2c virtual irq
 static uint8_t i2c_buff[2];
+uint8_t buffer[2];
 
 module_init(hello_init);
 module_exit(hello_exit);
@@ -175,23 +178,23 @@ static int mi_probe(struct platform_device *drv) {
 	map = of_iomap((drv->dev).of_node, 0);
 	printk(KERN_ALERT "Direccion I2C %p\n",(void *)map);
 
-	// virq = platform_get_irq(drv, 0);
-	// if(virq < 0) {
-	// 	printk(KERN_ALERT "ERROR virq\n");
-	// 	return virq;
-	// }
-	// if( request_irq(virq, mi_handler, IRQF_TRIGGER_RISING, drv->name, NULL) < 0 ) {
-	// 	printk(KERN_ALERT "ERROR alloc mi_handler\n");
-	// 	return -1;
-	// }
-	// printk(KERN_ALERT "VIRQ = %d\n", virq);
+	 virq = platform_get_irq(drv, 0);
+	 if(virq < 0) {
+	 	printk(KERN_ALERT "ERROR virq\n");
+	 	return virq;
+	 }
+	 if( request_irq(virq, mi_handler, IRQF_TRIGGER_RISING, drv->name, NULL) < 0 ) {
+	 	printk(KERN_ALERT "ERROR alloc mi_handler\n");
+	 	return -1;
+	 }
+	 printk(KERN_ALERT "VIRQ = %d\n", virq);
 
 	return 0;
 }
 
 static int mi_remove(struct platform_device *drv) {
 	printk(KERN_ALERT "Dispositivo desconectado\n");
-	//free_irq(virq, NULL);
+	free_irq(virq, NULL);
 	iounmap(map);
 	return 0;
 }
@@ -219,9 +222,14 @@ void i2c_init(void __iomem * addr) {
 	iowrite32(I2C_HIGH_TIME, addr + I2C_REG_SCLH);
 	iowrite32(I2C_OWN_ADDRESS, addr + I2C_REG_OA);
 	iowrite32((1<<3), addr + I2C_REG_SYSC); // 0x308
+	//iowrite32(0x308, addr + I2C_REG_SYSC); // 0x308
 	iowrite32(I2C_SLAVE_ADDRESS, addr + I2C_REG_SA);
 	//iowrite32(I2C_ENABLE, addr + I2C_REG_CON);
-	iowrite32(I2C_MASTER_RECEIVER, addr + I2C_REG_CON);
+
+	iowrite32(0x00, addr + I2C_REG_IRQENABLE_SET);
+	iowrite32(I2C_CLEAR_FIFO, addr + I2C_REG_BUFF);
+
+	iowrite32(I2C_ENABLE, addr + I2C_REG_CON);
 
 	msleep(10);
 	//value = ioread32(addr + I2C_REG_CON);
@@ -241,29 +249,50 @@ void i2c_init(void __iomem * addr) {
 //   return;
 // }
 
-void i2c_set_interrupt(uint8_t irq) {
-	iowrite32(I2C_IRQ_SET, map + I2C_REG_IRQENABLE_SET);
+void i2c_set_interrupt(uint32_t irq) {
+	int value;
+	value = ioread32(map + I2C_REG_IRQENABLE_SET);
+	printk(KERN_ALERT "Estoy en set IRQ = %d\n", value);
+
+	iowrite32(irq, map + I2C_REG_IRQENABLE_SET);
+	value = ioread32(map + I2C_REG_IRQENABLE_SET);
+	printk(KERN_ALERT "Estoy en set IRQ = %d\n", value);
 }
+
 
 uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size)
 {
-	int fla = 0;
-	int i;
-	u32 value;
-	u32 val[10];
-	iowrite32(size, addr + I2C_REG_CNT);
+	int value;
+	printk(KERN_ALERT "Estoy en master read\n");
+//	int fla = 0;
+//	int i;
+	//u32 value;
+	//u32 val[10];
+	fla_isr = 0;
+	//iowrite32(size, addr + I2C_REG_CNT);
+	iowrite32(2, addr + I2C_REG_CNT);
 	//iowrite32( (0x36 << 1) | 0x00, addr + I2C_REG_DATA);
-	i2c_set_interrupt(0);
+	i2c_set_interrupt(I2C_IRQ_RRDY);
 
-	value = ioread32(addr + I2C_REG_CON);
-	value |= (I2C_INIT_TX);
-	//iowrite32(I2C_MASTER_RECEIVER, addr + I2C_REG_CON);
-	iowrite32(value, addr + I2C_REG_CON);
+	//value = ioread32(addr + I2C_REG_CON);
+	//value |= (I2C_INIT_TX);
+	iowrite32(I2C_MASTER_RECEIVER, addr + I2C_REG_CON);
+	value = ioread32(addr + I2C_REG_CNT);
+	printk(KERN_ALERT "Estoy CNT = %d\n", value);
+	//iowrite32(value, addr + I2C_REG_CON);
 	//msleep(1);
-	value = ioread32(addr + I2C_REG_CON);
-	printk(KERN_ALERT "CON = %d\n", value);
+	//value = ioread32(addr + I2C_REG_CON);
+	//printk(KERN_ALERT "CON = %d\n", value);
+	wait_event_interruptible(mi_queue, fla_isr);
 
-	while (fla < size) {
+	value = ioread32(addr + I2C_REG_IRQSTATUS);
+	printk(KERN_ALERT "Estoy en set IRQ = %d\n", value);
+value = ioread32(addr + I2C_REG_CNT);
+printk(KERN_ALERT "Estoy en CNT 2 = %d\n", value);
+
+
+
+/*	while (fla < size) {
 		for(i = 0; i < 100; i++) {
 			if( (i < 100) && (ioread32(addr + I2C_REG_IRQSTATUS_RAW) & I2C_IRQ_RRDY) ) {
 				val[fla] = ioread32(addr + I2C_REG_DATA);
@@ -278,20 +307,45 @@ uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size)
 		printk(KERN_ALERT "Datos %d\n", fla);
 		fla++;
 	}
-
+*/
 	//iowrite32(0x10, addr + I2C_REG_DATA);
 	//value = ioread32(addr + I2C_REG_DATA);
-	printk(KERN_ALERT "VALUE %d\n", val[0]);
-	printk(KERN_ALERT "VALUE %d\n", val[1]);
+
 	//iowrite32(I2C_MASTER_RECEIVER, addr + I2C_REG_CON);
-	msleep(1);
+	printk(KERN_ALERT "DATO 0 = %d\n", buffer[0]);
+	printk(KERN_ALERT "DATO 0 = %d\n", buffer[1]);
+
+//	msleep(1);
 	//fla++;
 	/* code */
 	return 0;
 
 }
 
+void i2c_clear_irq(void __iomem * addr, u32 irq) {
+		printk(KERN_ALERT "Estoy en clear\n");
+	iowrite32(irq, addr + I2C_REG_IRQSTATUS);
+}
+uint8_t i2c_read_data(void __iomem * addr) {
+	u32 value;
+	printk(KERN_ALERT "Estoy en read\n");
+	value = ioread32(addr + I2C_REG_DATA);
+	return (uint8_t)value;
+}
+
 irqreturn_t mi_handler(int irq, void *dev_id) {
-	printk(KERN_ALERT "IRQ!\n");
+	//iowrite32(0xFFFFFFFF, map + 0x30);
+
+
+
+	fla_isr = 1;
+	buffer[0] = i2c_read_data(map);
+	buffer[1] = i2c_read_data(map);
+	printk(KERN_ALERT "IRQ %d!\n", buffer[0]);
+	printk(KERN_ALERT "IRQ %d!\n", buffer[1]);
+
+	i2c_clear_irq(map, I2C_CLEAR_RRDY);
+	wake_up_interruptible(&mi_queue);
+
 	return IRQ_HANDLED;
 }
