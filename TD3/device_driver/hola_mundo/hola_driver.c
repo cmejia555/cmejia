@@ -46,6 +46,17 @@ static struct platform_driver platDrv = {
 	}
 };
 
+typedef struct {
+	void __iomem *map;
+	int virq;
+	uint8_t txBuff[2];
+	uint8_t rxBuff[10];
+} I2C_INTERFACE_T;
+
+//I2C_INTERFACE_T->map = NULL;// i2c;
+
+
+
 static void __iomem *map;			// zona de memoria del i2c
 static int virq;							// i2c virtual irq
 static uint8_t i2c_buff[2];
