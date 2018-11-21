@@ -6,6 +6,7 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
+#include <linux/types.h>
 #include <linux/cdev.h>
 #include <linux/errno.h>
 #include <linux/uaccess.h>
@@ -16,6 +17,15 @@
 #include <linux/interrupt.h>
 
 #include "memory_map.h"
+
+struct I2C_INTERFACE_T {
+	int virq;
+  int flag_isr;
+	void __iomem *mapAddr;
+	uint8_t txBuff[10];
+	uint8_t rxBuff[10];
+};
+
 
 #define FIRST_MINOR	0
 #define NUMBER_DEV	1
@@ -32,13 +42,14 @@ ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offs
 static int mi_probe(struct platform_device *drv);
 static int mi_remove(struct platform_device *drv);
 
-//void i2c_clk_enable(unsigned int addr);
+
 void chip_config_register(u32 addr, u32 value);
 void i2c_init(void __iomem * addr);
-
-irqreturn_t mi_handler(int irq, void *dev_id);
 uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size);
-void i2c_set_interrupt(uint32_t irq);
+void i2c_set_interrupt(void __iomem * addr, uint32_t irq);
 void i2c_clear_irq(void __iomem * addr, u32 irq);
 uint8_t i2c_read_data(void __iomem * addr);
+void i2c_start_transfer(void __iomem * addr, u32 value);
+irqreturn_t mi_handler(int irq, void *dev_id);
+
 #endif

@@ -12,5 +12,3 @@ copy:
 clean:
 	make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -C $(KERNEL_DIR) M=$(PWD) clean
 	rm -f test_driver
-
-

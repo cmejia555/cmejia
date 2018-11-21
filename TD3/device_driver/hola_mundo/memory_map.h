@@ -1,11 +1,11 @@
-#include <linux/types.h>
 
+/* Registro clock del periferico */
 #define CM_PER_BASE           0x44E00000
 #define CM_PER_I2C_OFFSET     0x44
 #define CM_PER_I2C2_CLKCTRL   CM_PER_BASE | CM_PER_I2C_OFFSET
 #define I2C2_CLK_EN   (2 << 0)
 
-
+/* Registro de control de pines */
 #define CONTROL_MODULE_BASE   0x44E10000
 #define CONF_I2C2_SDA_OFFSET  0x978 // uart1_ctsn
 #define CONF_I2C2_SCL_OFFSET  0x97C // uart1_rtsn
@@ -41,20 +41,22 @@
 
 #define I2C_CON_MST       (1<<10)
 #define I2C_CON_TRX       (1<<9)
-#define I2C_MASTER_RECEIVER   0x8401
-#define I2C_MASTER_TRANSMITTER   0x8600
+//#define I2C_MASTER_RECEIVER   0x8401
+#define I2C_MASTER_RECEIVER   0x8403
+#define I2C_MASTER_TRANSMITTER   0x8601
 #define I2C_CON_STT       (1<<0) // bit start set
 
 #define I2C_INIT_TX       (1<<0)
 #define I2C_IRQ_SET     ((1 << 6) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0))
 
 #define I2C_IRQ_RRDY    (1 << 3)
+#define I2C_IRQ_ARDY    (1 << 2)
 
 #define I2C_REG_BUFF 0x94
 #define I2C_CLEAR_FIFO  (1 << 14)
 
 
-typedef struct {
+/*typedef struct {
   //u32 RESERVED[4];
   u32 SYSC;
   u32 RESERVED_1[5];
@@ -75,15 +77,4 @@ typedef struct {
   u32 SCLh;
   u32 RESERVED_4[7];
 } I2C_REGISTERS_T;
-
-#define i2c_registers      ((I2C_REGISTERS_T *) 0x10)
-#define i2c                (i2c_registers[0])
-// #define CM_PER_CLK    (CM_PER_T *)CM_PER_BASE
-//
-// int i2c_enable_clk(CM_PER_CLK_T * cmper);
-//
-// int i2c_enable_clk(CM_PER_CLK_T * cmper) {
-//   cmper->i2c_clkctrl = CM_PER_I2C_CLK_EN;
-//
-//   return 1;
-// }
+*/
