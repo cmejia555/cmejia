@@ -19,9 +19,11 @@ static int child_cont = 0;
 void signal_handler(int value) {
   printf("Soy el handelr\n");
 
-  child_cont--;
-  while( waitpid(-1, NULL, WNOHANG) != 0 );
-  printf("Termino el handler\n");
+  while( (waitpid(-1, NULL, WNOHANG)) > 0 ) {
+    child_cont--;
+  }
+
+  printf("Termino el handler %d\n", errno);
 }
 
 int main(int argc, char *argv[])
@@ -62,31 +64,33 @@ int main(int argc, char *argv[])
     printf("SERVIDOR EN ESPERA...\n");
     if( (sock_client = accept(sock_fd, (struct sockaddr *)&client, &client_len)) == -1 ) {
       perror("Error en accept()");
+      close(sock_fd);
       exit(EXIT_FAILURE);
     }
 
     child_cont++; // incrementa la cantidad de hijos
-
     pid = fork();
     switch (pid) {
       case -1:
         perror("Error en fork()");
+        close(sock_client);
+        close(sock_fd);
         exit(EXIT_FAILURE);
         break;
       case 0: // Proceso hijo
-        //close(sock_fd);
-        //pid_child = getpid();
+        close(sock_fd);
+        printf("HIJO PID: %d\n", getpid());
         child_process(sock_client, client);
         close(sock_client);
         break;
       default: // Proceso padre
         close(sock_client);
-        //wait(NULL);
         break;
     }
     printf("Hijos activos: %d\n", child_cont);
   }
-  close(sock_fd);
+
+  exit(EXIT_FAILURE);
 }
 
 
@@ -100,10 +104,13 @@ int child_process(int fd, struct sockaddr_in client)
   msgLen = recv(fd, buffer, MAX_STRING, 0);
   printf("Recibido del hijo %s\n", buffer);
 
+  if(msgLen == -1) {
+    perror("recv()");
+    exit(EXIT_FAILURE);
+  }
   if( strcmp(buffer, "HOLA") == 0 ) {
     send(fd, "CHAU hijo", strlen("CHAU hijo"), 0);
   }
-  else printf("FUERA DE SEND\n");
 
   exit(EXIT_SUCCESS);
 }
