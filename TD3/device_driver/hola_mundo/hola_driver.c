@@ -247,7 +247,7 @@ void i2c_init(void __iomem * addr) {
 	return;
 }
 
-uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size)
+uint8_t i2c_master_read(void __iomem *addr, uint8_t *buff, uint8_t size)
 {
 	int value;
 	printk(KERN_ALERT "Estoy en master read\n");
@@ -270,7 +270,7 @@ uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size)
 
 }
 
-void i2c_start_transfer(void __iomem * addr, u32 value) {
+void i2c_start_transfer(void __iomem *addr, u32 value) {
 	iowrite32(value, addr + I2C_REG_CON);
 }
 
@@ -300,3 +300,5 @@ irqreturn_t mi_handler(int irq, void *dev_id) {
 
 	return IRQ_HANDLED;
 }
+
+
