@@ -284,7 +284,7 @@ void i2c_clear_irq(void __iomem * addr, u32 irq) {
 
 uint8_t i2c_read_data(void __iomem * addr) {
 	u32 value;
-	value = ioread32(addr + I2C_REG_DATA);
+	value = ioread32(addr + I2C_REG_DATA) & 0x7F;
 	return (uint8_t)value;
 }
 
@@ -300,5 +300,3 @@ irqreturn_t mi_handler(int irq, void *dev_id) {
 
 	return IRQ_HANDLED;
 }
-
-

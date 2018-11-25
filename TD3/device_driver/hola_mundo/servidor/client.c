@@ -10,50 +10,72 @@
 #include <signal.h>
 #include <errno.h>
 
-#define BUFLEN 81
+#define BUFLEN 100
+#define END_TRANSMITION   "FIN"
+
+int sock;
+
+void signal_handler(int signal_num) {
+  if( signal_num == SIGINT ) {
+    close(sock);
+    exit(EXIT_SUCCESS);
+  }
+}
 
 int main(int argc, char *argv[])
 {
-  int sock;
   struct sockaddr_in server;
   struct hostent *ip;
-  int msgLength;
+  ssize_t msgLength;
+  char data[BUFLEN];
+  int request_time;
 
-  char buf[BUFLEN];
-
-  if (argc < 3) {
-    printf("Enter ./client IP PORT\n");
+  if (argc < 4) {
+    printf("Enter ./client IP PORT TIME\n");
     exit(EXIT_FAILURE);
   }
 
-  server.sin_family= AF_INET;
+  signal(SIGINT, signal_handler);
+
+  sscanf(argv[3], "%d", &request_time);
+
+  server.sin_family= PF_INET;
   ip = gethostbyname(argv[1]);
   memcpy(&(server.sin_addr), ip->h_addr_list[0], ip->h_length);
   server.sin_port = htons(atoi(argv[2]));
   bzero(&(server.sin_zero),8);
 
   if( (sock = socket(PF_INET, SOCK_STREAM, 0)) == -1 ) {
-    perror("Error en apertura de socket\n");
+    perror("Error socket()");
     exit(EXIT_FAILURE);
   }
 
-  if( connect(sock, (struct sockaddr *)&server, sizeof(server)) == -1 )
-  {
-    perror("No se puede conectar.\n");
+  if( connect(sock, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) == -1 ) {
+    perror("NO SE PUDO ESTABLECER CONEXION CON EL SERVER");
     exit(EXIT_FAILURE);
   }
 
-  printf("CLIENTE\n");
-  //fgets(buf, sizeof(buf)-1, stdin);
-  //printf("Enviado %s %d\n", buf, strlen(buf));
-  send(sock, "HOLA", strlen("HOLA")+1, 0);
-
-  memset(buf, 0, BUFLEN);
-  msgLength = recv(sock, buf, BUFLEN, 0);
-
-  printf("SERVIDOR: %s\n", buf);
+  send(sock, &request_time, sizeof(int), 0); // envio el tiempo de peticion
+  while (1) {
+    memset(data, 0, BUFLEN);
+    msgLength = recv(sock, data, BUFLEN, 0);
+    if( msgLength == -1 ) { // -1: error en recv
+      perror("Error recv()");
+      close(sock);
+      exit(EXIT_FAILURE);
+    }
+    else if(msgLength == 0) { // 0: server cerro la conexion del socket
+      printf("CONEXION INTERRUMPIDA. SERVER OFFLINE\n");
+      close(sock);
+      exit(EXIT_FAILURE);
+    }
+    printf("SERVIDOR: %s %d\n", data, msgLength);
+    if( strcmp(data, END_TRANSMITION) == 0 ) {
+      printf("SERVER termino transmision\n");
+      break;
+    }
+  }
 
   close(sock);
-
   exit(EXIT_SUCCESS);
 }
