@@ -163,7 +163,7 @@ ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offs
 		printk(KERN_ALERT "Bytes sin copiar a buffer de usuario = %ld\n", bytesNotCopy);
 	}
 //*****************************************************
-	i2c_master_read(i2c.mapAddr, i2c.rxBuff, 2);
+	//i2c_master_read(i2c.mapAddr, i2c.rxBuff, 2);
 	//i2c_master_read(map, i2c_buff, 2);
 	return (sizeString - bytesNotCopy);
 }
