@@ -36,19 +36,21 @@
 #define I2C_LOW_TIME      0x0D // low time = (value + 7) * ICLK B4
 #define I2C_HIGH_TIME     0x0F // high time = (value + 5) * ICLK B8
 #define I2C_OWN_ADDRESS   0x36
-#define I2C_SLAVE_ADDRESS 0x49
+//#define I2C_SLAVE_ADDRESS 0x49
+#define I2C_SLAVE_ADDRESS 0x68
 
 
 #define I2C_CON_MST       (1<<10)
 #define I2C_CON_TRX       (1<<9)
 //#define I2C_MASTER_RECEIVER   0x8401
 #define I2C_MASTER_RECEIVER   0x8403
-#define I2C_MASTER_TRANSMITTER   0x8601
+#define I2C_MASTER_TRANSMITTER   0x8603
 #define I2C_CON_STT       (1<<0) // bit start set
 
 #define I2C_INIT_TX       (1<<0)
 #define I2C_IRQ_SET     ((1 << 6) | (1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0))
 
+#define I2C_IRQ_XRDY    (1 << 4)
 #define I2C_IRQ_RRDY    (1 << 3)
 #define I2C_IRQ_ARDY    (1 << 2)
 

@@ -163,7 +163,7 @@ ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offs
 		printk(KERN_ALERT "Bytes sin copiar a buffer de usuario = %ld\n", bytesNotCopy);
 	}
 //*****************************************************
-	//i2c_master_read(i2c.mapAddr, i2c.rxBuff, 2);
+	i2c_master_read(i2c.mapAddr, i2c.rxBuff, 2);
 	//i2c_master_read(map, i2c_buff, 2);
 	return (sizeString - bytesNotCopy);
 }
@@ -247,10 +247,32 @@ void i2c_init(void __iomem * addr) {
 	return;
 }
 
+uint8_t i2c_master_write(void __iomem *addr, uint8_t *buff, uint8_t size)
+{
+	int i = 0;
+	printk(KERN_ALERT "Estoy en master write\n");
+	i2c.flag_isr = 0;
+
+	iowrite32(size, addr + I2C_REG_CNT);
+	i2c_set_interrupt(addr, I2C_IRQ_XRDY);
+	//i2c_set_data(addr, buff[i]);
+		//i2c_set_data(addr, buff[i]);
+		//iowrite32(*buff, addr + I2C_REG_DATA);
+
+	i2c_start_transfer(addr, I2C_MASTER_TRANSMITTER);
+	//i2c_set_data(addr, buff[i]);
+	wait_event_interruptible(mi_queue, i2c.flag_isr);
+
+	printk(KERN_ALERT "Datos enviados\n");
+
+	return 0;
+}
+
 uint8_t i2c_master_read(void __iomem *addr, uint8_t *buff, uint8_t size)
 {
-	int value;
+	uint8_t value = 0x00;
 	printk(KERN_ALERT "Estoy en master read\n");
+	i2c_master_write(addr, &value, 1);
 
 	i2c.flag_isr = 0;
 
@@ -284,18 +306,27 @@ void i2c_clear_irq(void __iomem * addr, u32 irq) {
 
 uint8_t i2c_read_data(void __iomem * addr) {
 	u32 value;
-	value = ioread32(addr + I2C_REG_DATA) & 0x7F;
+	value = ioread32(addr + I2C_REG_DATA);
 	return (uint8_t)value;
 }
 
 irqreturn_t mi_handler(int irq, void *dev_id) {
-	printk(KERN_ALERT "Estoy en el Handler\n");
-	i2c.flag_isr = 1;
+	uint32_t irq_status = ioread32(i2c.mapAddr + I2C_REG_IRQSTATUS);
+	printk(KERN_ALERT "Estoy en el Handler: %d\n", irq_status);
+i2c.flag_isr = 1;
+	if(irq_status & I2C_IRQ_XRDY) {
+		printk(KERN_ALERT "Estoy en el Handler 2\n");
+		iowrite32(0x00, i2c.mapAddr + I2C_REG_DATA);
+		i2c_clear_irq(i2c.mapAddr, I2C_IRQ_XRDY);
+	}
+	if( irq_status & I2C_IRQ_RRDY) {
+	//i2c.flag_isr = 1;
 	i2c.rxBuff[0] = i2c_read_data(i2c.mapAddr);
 	i2c.rxBuff[1] = i2c_read_data(i2c.mapAddr);
 	//printk(KERN_ALERT "IRQ %d!\n", buffer[1]);
 
 	i2c_clear_irq(i2c.mapAddr, I2C_CLEAR_RRDY); // los clear de los flag de IRQs deben ir al final
+	}
 	wake_up_interruptible(&mi_queue);
 
 	return IRQ_HANDLED;
