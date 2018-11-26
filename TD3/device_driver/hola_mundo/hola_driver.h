@@ -23,7 +23,9 @@ struct I2C_INTERFACE_T {
   int flag_isr;
 	void __iomem *mapAddr;
 	uint8_t txBuff[10];
+	uint8_t txSize;
 	uint8_t rxBuff[10];
+	uint8_t rxSize;
 };
 
 
@@ -45,6 +47,7 @@ static int mi_remove(struct platform_device *drv);
 
 void chip_config_register(u32 addr, u32 value);
 void i2c_init(void __iomem * addr);
+uint8_t i2c_master_write(void __iomem *addr, uint8_t *buff, uint8_t size);
 uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size);
 void i2c_set_interrupt(void __iomem * addr, uint32_t irq);
 void i2c_clear_irq(void __iomem * addr, u32 irq);
