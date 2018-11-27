@@ -18,20 +18,21 @@
 
 #include "memory_map.h"
 
-struct I2C_INTERFACE_T {
+#define FIRST_MINOR							0
+#define NUMBER_DEV							1
+#define MAX_BUF_SIZE						12
+#define MAX_REGISTERS_SIZE			MAX_BUF_SIZE
+
+
+struct I2C_DATA_T{
 	int virq;
   int flag_isr;
 	void __iomem *mapAddr;
-	uint8_t txBuff[10];
+	uint8_t txBuff[MAX_BUF_SIZE];
 	uint8_t txSize;
-	uint8_t rxBuff[10];
+	uint8_t rxBuff[MAX_BUF_SIZE];
 	uint8_t rxSize;
 };
-
-
-#define FIRST_MINOR	0
-#define NUMBER_DEV	1
-#define MAX_SIZE_STRING 200
 
 static int hello_init(void);
 static void hello_exit(void);
@@ -50,7 +51,8 @@ void i2c_init(void __iomem * addr);
 uint8_t i2c_master_write(void __iomem *addr, uint8_t *buff, uint8_t size);
 uint8_t i2c_master_read(void __iomem * addr, uint8_t *buff, uint8_t size);
 void i2c_enable_interrupt(void __iomem * addr, uint32_t irq);
-void i2c_clear_irq(void __iomem * addr, u32 irq);
+void i2c_clear_interrupt(void __iomem * addr, u32 irq);
+void i2c_write_data(void __iomem *addr, uint32_t value);
 uint8_t i2c_read_data(void __iomem * addr);
 void i2c_start_transfer(void __iomem * addr, u32 value);
 irqreturn_t mi_handler(int irq, void *dev_id);
