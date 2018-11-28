@@ -15,10 +15,18 @@
 
 int sock;
 
+static void properly_shutdown(const char *msg, int status) {
+  printf("Error: %s\n", msg);
+  close(sock);
+  exit(status);
+}
+
 void signal_handler(int signal_num) {
   if( signal_num == SIGINT ) {
-    close(sock);
-    exit(EXIT_SUCCESS);
+    properly_shutdown("Signal SIGINT", EXIT_SUCCESS);
+  }
+  if( signal_num == SIGPIPE ) {
+    properly_shutdown("Signal SIGPIPE", EXIT_FAILURE);
   }
 }
 
@@ -36,6 +44,7 @@ int main(int argc, char *argv[])
   }
 
   signal(SIGINT, signal_handler);
+  signal(SIGPIPE, signal_handler);
 
   sscanf(argv[3], "%d", &request_time);
 
@@ -46,13 +55,11 @@ int main(int argc, char *argv[])
   bzero(&(server.sin_zero),8);
 
   if( (sock = socket(PF_INET, SOCK_STREAM, 0)) == -1 ) {
-    perror("Error socket()");
-    exit(EXIT_FAILURE);
+    properly_shutdown("socket()", EXIT_FAILURE);
   }
 
   if( connect(sock, (struct sockaddr *)&server, sizeof(struct sockaddr_in)) == -1 ) {
-    perror("NO SE PUDO ESTABLECER CONEXION CON EL SERVER");
-    exit(EXIT_FAILURE);
+    properly_shutdown("NO SE PUDO ESTABLECER CONEXION CON EL SERVER", EXIT_FAILURE);
   }
 
   send(sock, &request_time, sizeof(int), 0); // envio el tiempo de peticion
@@ -60,22 +67,16 @@ int main(int argc, char *argv[])
     memset(data, 0, BUFLEN);
     msgLength = recv(sock, data, BUFLEN, 0);
     if( msgLength == -1 ) { // -1: error en recv
-      perror("Error recv()");
-      close(sock);
-      exit(EXIT_FAILURE);
+      properly_shutdown("recv()", EXIT_FAILURE);
     }
     else if(msgLength == 0) { // 0: server cerro la conexion del socket
-      printf("CONEXION INTERRUMPIDA. SERVER OFFLINE\n");
-      close(sock);
-      exit(EXIT_FAILURE);
+      properly_shutdown("CONEXION INTERRUMPIDA. SERVER OFFLINE", EXIT_FAILURE);
     }
     printf("SERVIDOR: %s\n", data);
     if( strcmp(data, END_TRANSMITION) == 0 ) {
-      printf("SERVER termino transmision\n");
-      break;
+      properly_shutdown("SERVER termino transmision", EXIT_SUCCESS);
     }
   }
 
-  close(sock);
-  exit(EXIT_SUCCESS);
+  properly_shutdown("", EXIT_SUCCESS);
 }

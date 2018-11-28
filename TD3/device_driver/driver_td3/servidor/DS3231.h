@@ -22,8 +22,8 @@ typedef struct _TIME {
   uint16_t year;
 } TIME_T;
 
-bool DS3231_init(int *fd);
-void DS3231_finish(int fd);
-TIME_T DS3231_time(int fd);
-bool DS3231_lostPower(int fd);
-int DS3231_adjust_time(int fd);
+bool DS3231_init(void);
+void DS3231_finish(void);
+TIME_T DS3231_time(void);
+bool DS3231_lostPower(void);
+int DS3231_adjust_time(const uint8_t *time_str);

@@ -7,29 +7,30 @@ union semun {
   struct seminfo  *__buf;  /* Buffer for IPC_INFO (Linux specific) */
 };
 
-int semaphore_init(int *id) {
+int semaphore_create(void) {
   key_t key;
+  int semid;
   union semun arg;
 
   key = ftok(FILE_PATH, 'K');
   if(key == -1)
     return -1;
 
-  *id = semget(key, 1, 0666 | IPC_CREAT);
-  if( *id == -1 )
+  semid = semget(key, 1, 0666 | IPC_CREAT);
+  if( semid == -1 )
     return -1;
 
   arg.val = 1;
-  if( semctl(*id, 0, SETVAL, arg) == -1 ) {
+  if( semctl(semid, 0, SETVAL, arg) == -1 ) {
     return -1;
   }
 
-  return 1;
+  return semid;
 }
 
-int semaphore_destroy(int id) {
+int semaphore_destroy(int semid) {
   union semun arg;
-  return semctl(id, 0, IPC_RMID, arg);
+  return semctl(semid, 0, IPC_RMID, arg);
 }
 
 void lock(int semid) {

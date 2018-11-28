@@ -4,7 +4,7 @@
 
 #define FILE_PATH     "./server"
 
-int semaphore_init(int *id);
-int semaphore_destroy(int id);
+int semaphore_create(void);
+int semaphore_destroy(int semid);
 void lock(int semid);
 void unlock(int semid);

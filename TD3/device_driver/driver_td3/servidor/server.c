@@ -15,55 +15,77 @@
 
 #define MAX_PENDING_CONNECTIONS   2
 
+typedef struct {
+  int sock_main;
+  int sock_client;
+  struct sockaddr_in server_addr;
+  struct sockaddr_in client_adrr;
+  socklen_t sock_size;
+} peer_t;
+
 int child_process(int fd, int semid);
 
-int driver;
+typedef enum {PARENT = 0, CHILD = 1} process_t;
 
+int sock_main, sock_client;
+pid_t ppid;
 static int child_cont = 0;
+int semid;
+
+
+static void properly_shutdown(const char *msg, int status) { // Finaliza el proceso
+  printf("Error: %s\n", msg);
+  close(sock_main);
+  close(sock_client);
+  exit(status);
+}
 
 void signal_handler(int signal_num) {
   if( signal_num == SIGPIPE ) {
-    printf("CLIENTE interrumpio conexion\n");
+    properly_shutdown("CLIENTE interrumpio conexion", EXIT_FAILURE);
   }
 
-  if( signal_num == SIGCHLD ) {
-    //printf("Soy el HANDLER: %d\n", getpid());
+  if( signal_num == SIGCHLD ) { // esta signal solo lo ejecuta el padre
     while( (waitpid(-1, NULL, WNOHANG)) > 0 ) {
       child_cont--;
     }
   }
+  if( signal_num == SIGINT ) {
+    if ( ppid == getpid() ) { // solo el el padre cierra esto
+      DS3231_finish();
+      semaphore_destroy(semid);
+    }
+    properly_shutdown("Signal SIGINT", EXIT_SUCCESS);
+  }
 }
+
 
 int main(int argc, char *argv[])
 {
   pid_t pid;
-  int sock_fd, sock_client;
   struct sockaddr_in server, client;
   socklen_t client_len;
-
-  int semid;
 
   if(argc < 2) {
     printf("Enter: ./server PORT\n");
     exit(EXIT_FAILURE);
   }
 
-  if( DS3231_init(&driver) ) {
-    perror("Open driver");
-    exit(EXIT_FAILURE);
+  if( DS3231_init() ) {
+    properly_shutdown("Driver open()", EXIT_FAILURE);
   }
-  if( DS3231_lostPower(driver) ) {
+  if( DS3231_lostPower() ) {
     printf("Adjust DS3231\n");
-    DS3231_adjust_time(driver);
+    DS3231_adjust_time(NULL);
   }
 
   signal(SIGPIPE, signal_handler);
   signal(SIGCHLD, signal_handler);
+  signal(SIGINT, signal_handler);
 
-  sock_fd = socket(PF_INET, SOCK_STREAM, 0);
-  if ( sock_fd == -1 ) {
-    perror("Error en apertura de socket\n");
-    exit(EXIT_FAILURE);
+  sock_main = socket(PF_INET, SOCK_STREAM, 0);
+  if ( sock_main == -1 ) {
+    properly_shutdown("socket()", EXIT_FAILURE);
   }
 
   server.sin_family= PF_INET;
@@ -71,57 +93,51 @@ int main(int argc, char *argv[])
   server.sin_addr.s_addr = INADDR_ANY;
   bzero(&(server.sin_zero),8);
 
-  if( bind(sock_fd, (struct sockaddr*)&server, sizeof(struct sockaddr_in)) == -1 ) {
-  perror("Error en bind()");
-  exit(EXIT_FAILURE);
+  if( bind(sock_main, (struct sockaddr*)&server, sizeof(struct sockaddr_in)) == -1 ) {
+    properly_shutdown("bind()", EXIT_FAILURE);
   }
 
-  if( listen(sock_fd, MAX_PENDING_CONNECTIONS) == -1 ) {
-  perror("Error en listen()");
-  exit(EXIT_FAILURE);
+  if( listen(sock_main, MAX_PENDING_CONNECTIONS) == -1 ) {
+    properly_shutdown("listen()", EXIT_FAILURE);
   }
 
-  if( semaphore_init(&semid) == -1 ) {
-    perror("semaphore");
-    exit(EXIT_FAILURE);
+  semid = semaphore_create();
+  if( semid == -1 ) {
+    properly_shutdown("semaphore_create()", EXIT_FAILURE);
   }
 
   client_len = sizeof(struct sockaddr_in);
   while(1) {
     printf("SERVIDOR EN ESPERA...\n");
-    if( (sock_client = accept(sock_fd, (struct sockaddr *)&client, &client_len)) == -1 ) {
-      perror("Error en accept()");
-      close(sock_fd);
-      exit(EXIT_FAILURE);
+    if( (sock_client = accept(sock_main, (struct sockaddr *)&client, &client_len)) == -1 ) {
+      properly_shutdown("accept()", EXIT_FAILURE);
     }
 
-    child_cont++; // incrementa la cantidad de hijos
     pid = fork();
     switch (pid) {
       case -1: // error en fork()
-        perror("Error en fork()");
-        close(sock_client);
-        close(sock_fd);
-        exit(EXIT_FAILURE);
+        properly_shutdown("fork()", EXIT_FAILURE);
         break;
       case 0: // Proceso hijo
-        close(sock_fd);
+        //close(sock_main); // cierra la copia del socket principal
         printf("HIJO PID: %d\n", getpid());
         child_process(sock_client, semid);
         break;
       default: // Proceso padre
+        child_cont++; // incrementa la cantidad de hijos
         printf("Conexion establecida con cliente IP %s y PORT %d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
         close(sock_client);
+        ppid = getpid();
         break;
     }
     printf("Hijos activos: %d\n", child_cont);
   }
 
-  exit(EXIT_FAILURE);
+  properly_shutdown("", EXIT_FAILURE);
 }
 
 #define MAX_STRING    50
-#define TIME_OUT      2
+#define TIME_OUT      50
 
 int child_process(int fd, int semid)
 {
@@ -137,8 +153,7 @@ int child_process(int fd, int semid)
   fcntl(fd, F_SETFL, flag);*/
   msgLen = recv(fd, &request_time, sizeof(int), 0); // wait for request time set
   if(msgLen == -1) {
-    perror("Error recv()");
-    exit(EXIT_FAILURE);
+    properly_shutdown("recv()", EXIT_FAILURE);
   }
   printf("Recibido del hijo: time = %d\n", request_time);
 
@@ -147,23 +162,22 @@ int child_process(int fd, int semid)
     count_time++;
     if( count_time == TIME_OUT ) {
       if( send(fd, buf_end, strlen(buf_end), 0) > 0 ) {
-        printf("Se alcanzo el TIME_OUT\n");
+        properly_shutdown("Se alcanzo el TIME_OUT", EXIT_SUCCESS);
       }
-      break;
     }
     // usar flag MSG_NOSIGNAL, en send(), si no se captura SIGPIPE
     if( !(count_time % request_time) ) { // envio datos del sensor al cliente cada request_time
       lock(semid);
-      rtc = DS3231_time(driver);
+      rtc = DS3231_time();
       unlock(semid);
       sprintf(data, "%s, %.2d-%.2d-%.4d, %.2d:%.2d:%.2d", rtc.day, rtc.date, rtc.month, rtc.year,
       rtc.hh, rtc.mm, rtc.ss);
+
       if( send(fd, data, strlen(data), 0) == -1 ) { // error al enviar datos
-        break;
+        properly_shutdown("send()", EXIT_FAILURE);
       }
     }
   }
-  close(fd);
-  //DS3231_finish(driver);
-  exit(EXIT_SUCCESS);
+
+  properly_shutdown("", EXIT_FAILURE);
 }

@@ -28,22 +28,22 @@ static void clear_OSF(int fd) {
 
 uint8_t *days[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
-
+int driver;
 //receive_from_client()
 //send_to_client()
-bool DS3231_init(int *fd) {
-  *fd = open("/dev/to_upper", O_RDWR);
-  return (*fd == -1);
+bool DS3231_init(void) {
+  driver = open("/dev/to_upper", O_RDWR);
+  return (driver == -1);
 }
-void DS3231_finish(int fd) {
-  close(fd);
+void DS3231_finish(void) {
+  close(driver);
 }
 
-TIME_T DS3231_time(int fd) {
+TIME_T DS3231_time(void) {
   TIME_T time_now;
   uint8_t rxBuff[7];
 
-  read_registers(fd, DS3231_INIT_REG, rxBuff, 7);
+  read_registers(driver, DS3231_INIT_REG, rxBuff, 7);
   //printf("FECHA %s %s\n", __DATE__, __TIME__);
 
   time_now.ss = bcd2bin(rxBuff[0]);
@@ -57,7 +57,7 @@ TIME_T DS3231_time(int fd) {
   return time_now;
 }
 
-int DS3231_adjust_time(int fd) {
+int DS3231_adjust_time(const uint8_t *timer_str) {
   int size;
   time_t t;
   struct tm *tm;
@@ -75,16 +75,16 @@ int DS3231_adjust_time(int fd) {
   txBuff[6] = bin2bcd((uint8_t)(tm->tm_mon + 1));
   txBuff[7] = bin2bcd((uint8_t)(tm->tm_year - 100)); // -100 por como se ajusta el año en la struct tm
 
-  size = write(fd, txBuff, 8);
+  size = write(driver, txBuff, 8);
 
-  clear_OSF(fd);
+  clear_OSF(driver);
 
   return (size > 0);
 }
 
-bool DS3231_lostPower(int fd) {
+bool DS3231_lostPower(void) {
   uint8_t rxBuff;
-  read_registers(fd, DS3231_STATUSREG, &rxBuff, 1);
+  read_registers(driver, DS3231_STATUSREG, &rxBuff, 1);
   printf("OSF: %d\n", rxBuff);
 
   return (rxBuff >> 7);
