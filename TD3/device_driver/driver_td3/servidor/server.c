@@ -48,6 +48,15 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 
+  if( DS3231_init(&driver) ) {
+    perror("Open driver");
+    exit(EXIT_FAILURE);
+  }
+  if( DS3231_lostPower(driver) ) {
+    printf("Adjust DS3231\n");
+    DS3231_adjust_time(driver);
+  }
+
   signal(SIGPIPE, signal_handler);
   signal(SIGCHLD, signal_handler);
 
@@ -76,16 +85,6 @@ int main(int argc, char *argv[])
     perror("semaphore");
     exit(EXIT_FAILURE);
   }
-
-  DS3231_init(&driver);
-  DS3231_adjust_time(driver);
-  /*if( DS3231_isStopped(driver) ) {
-    printf("Adjust DS3231\n");
-    //DS3231_adjust_time(driver);
-  }
-  else {
-    printf("NOT\n");
-  }*/
 
   client_len = sizeof(struct sockaddr_in);
   while(1) {
@@ -141,7 +140,7 @@ int child_process(int fd, int semid)
     perror("Error recv()");
     exit(EXIT_FAILURE);
   }
-  printf("Recibido del hijo: time = %d  size = %d\n", request_time, (int)msgLen);
+  printf("Recibido del hijo: time = %d\n", request_time);
 
   while(1) {
     sleep(1);
@@ -157,7 +156,7 @@ int child_process(int fd, int semid)
       lock(semid);
       rtc = DS3231_time(driver);
       unlock(semid);
-      sprintf(data, "Day %.2d, Date %.2d/%.2d/%.4d, Hour %.2d:%.2d:%.2d", rtc.day, rtc.date, rtc.month, rtc.year,
+      sprintf(data, "%s, %.2d-%.2d-%.4d, %.2d:%.2d:%.2d", rtc.day, rtc.date, rtc.month, rtc.year,
       rtc.hh, rtc.mm, rtc.ss);
       if( send(fd, data, strlen(data), 0) == -1 ) { // error al enviar datos
         break;

@@ -192,8 +192,6 @@ ssize_t mi_read(struct file *fd, char __user *userBuff, size_t len, loff_t *offs
 
 void chip_config_register(u32 addr, u32 value) {
 	void *mappping = ioremap(addr, 1);
-	printk(KERN_ALERT "Address config: = %p\n",mappping);
-
 	iowrite32(value, mappping);
 	iounmap(mappping);
 
@@ -201,7 +199,7 @@ void chip_config_register(u32 addr, u32 value) {
 }
 
 void i2c_init(void __iomem * addr) {
-	printk(KERN_ALERT "Configuracion Init\n");
+	//printk(KERN_ALERT "Configuracion Init\n");
 	iowrite32(I2C_DISABLE_MODULE, addr + I2C_REG_CON);
 	iowrite32(I2C_PRESCALE, addr + I2C_REG_PSC);
 	iowrite32(I2C_LOW_TIME_CLOCK, addr + I2C_REG_SCLL);
@@ -220,27 +218,23 @@ void i2c_init(void __iomem * addr) {
 uint8_t i2c_master_write(void __iomem *addr, uint8_t *buff, uint8_t len)
 {
 	int i;
-	printk(KERN_ALERT "Estoy en master write: %d\n", buff[0]);
+	//printk(KERN_ALERT "Estoy en master write: %d\n", buff[0]);
 	i2c->flag_isr = 0;
 
 	for(i = 0; i < len; i++) {
-		i2c_write_data(addr, (uint32_t)buff[i]);
+		i2c_write_data(addr, (uint32_t)buff[i]); // Poner los datos a la FIFO antes de cargar COUNT DATA!
 	}
-	//iowrite32(i2c->txBuff[0], addr + I2C_REG_DATA);
 	iowrite32(len, addr + I2C_REG_CNT);
 	i2c_enable_interrupt(addr, I2C_IRQ_XRDY);
 	i2c_start_transfer(addr, I2C_MASTER_TRANSMITTER);
 	wait_event_interruptible(mi_queue, i2c->flag_isr);
-
-	printk(KERN_ALERT "Datos enviados\n");
 
 	return 0;
 }
 
 uint8_t i2c_master_read(void __iomem *addr, uint8_t *buff, uint8_t len)
 {
-	int i;
-	printk(KERN_ALERT "Estoy en master read\n");
+	//printk(KERN_ALERT "Estoy en master read\n");
 	//i2c_master_write(addr, &value, 1);
 
 	i2c->flag_isr = 0;
@@ -250,9 +244,6 @@ uint8_t i2c_master_read(void __iomem *addr, uint8_t *buff, uint8_t len)
 	i2c_start_transfer(addr, I2C_MASTER_RECEIVER);
 	wait_event_interruptible(mi_queue, i2c->flag_isr);
 
-	for(i = 0; i < len; i++) { // debug
-		printk(KERN_ALERT "IRQ %d = %d\n", i, buff[i]);
-	}
 	return 0;
 }
 
@@ -285,14 +276,12 @@ irqreturn_t mi_handler(int irq, void *dev_id) {
 	int i;
 	uint32_t irq_status = ioread32(i2c->mapAddr + I2C_REG_IRQSTATUS);
 	printk(KERN_ALERT "Estoy en el Handler: %d\n", irq_status);
+
 	i2c->flag_isr = 1;
 	if( irq_status & I2C_IRQ_XRDY ) {
-		printk(KERN_ALERT "Estoy en el Handler XRDY\n");
-		//iowrite32(i2c.txBuff[0], i2c.mapAddr + I2C_REG_DATA);
 		i2c_clear_interrupt(i2c->mapAddr, I2C_IRQ_XRDY);
 	}
 	if( irq_status & I2C_IRQ_RRDY ) {
-		printk(KERN_ALERT "Estoy en el Handler RRDY\n");
 		for(i = 0; i < i2c->rxSize; i++) {
 			i2c->rxBuff[i] = i2c_read_data(i2c->mapAddr);
 		}

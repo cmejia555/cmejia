@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
       close(sock);
       exit(EXIT_FAILURE);
     }
-    printf("SERVIDOR: %s ; size:%d\n", data, msgLength);
+    printf("SERVIDOR: %s\n", data);
     if( strcmp(data, END_TRANSMITION) == 0 ) {
       printf("SERVER termino transmision\n");
       break;

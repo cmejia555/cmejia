@@ -23,7 +23,6 @@
 #define MAX_BUF_SIZE						12
 #define MAX_REGISTERS_SIZE			MAX_BUF_SIZE
 
-
 struct I2C_DATA_T{
 	int virq;
   int flag_isr;

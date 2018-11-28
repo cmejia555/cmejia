@@ -1,13 +1,39 @@
 #include "DS3231.h"
 
-static uint8_t rawdata_to_time (uint8_t val) { return val - 6 * (val >> 4); }
-static uint8_t time_to_rawdata (uint8_t val) { return val + 6 * (val / 10); }
+#define DAY(n)  (days[n])
+
+static uint8_t bcd2bin (uint8_t val) { return val - 6 * (val >> 4); }
+static uint8_t bin2bcd (uint8_t val) { return val + 6 * (val / 10); }
+
+static int read_registers(int fd, const uint8_t reg, uint8_t *buf, uint32_t cant_reg) {
+  int size;
+  size = write(fd, &reg, 1);
+  size = read(fd, buf, cant_reg);
+
+  return size;
+}
+
+static void clear_OSF(int fd) {
+  uint8_t status;
+  uint8_t txBuff[2];
+  uint8_t rxBuff;
+
+  read_registers(fd, DS3231_STATUSREG, &rxBuff, 1);
+
+  status = rxBuff & ~0x80;
+  txBuff[0] = DS3231_STATUSREG;
+  txBuff[1] = status;
+  write(fd, txBuff, 2);
+}
+
+uint8_t *days[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
 
 //receive_from_client()
 //send_to_client()
 bool DS3231_init(int *fd) {
   *fd = open("/dev/to_upper", O_RDWR);
-  return (*fd != -1);
+  return (*fd == -1);
 }
 void DS3231_finish(int fd) {
   close(fd);
@@ -15,23 +41,18 @@ void DS3231_finish(int fd) {
 
 TIME_T DS3231_time(int fd) {
   TIME_T time_now;
-  int size;
-  uint8_t txBuff[1] = {DS3231_INIT_REG};
   uint8_t rxBuff[7];
 
-  size = write(fd, txBuff, 1);
-  printf("Enviados size = %d\n", size);
+  read_registers(fd, DS3231_INIT_REG, rxBuff, 7);
+  //printf("FECHA %s %s\n", __DATE__, __TIME__);
 
-  size = read(fd, rxBuff, 7);
-  printf("Recibidos size = %d\n", size);
-
-  time_now.ss = rawdata_to_time(rxBuff[0]);
-  time_now.mm = rawdata_to_time(rxBuff[1]);
-  time_now.hh = rawdata_to_time(rxBuff[2]);
-  time_now.day = rawdata_to_time(rxBuff[3]);
-  time_now.date = rawdata_to_time(rxBuff[4]);
-  time_now.month = rawdata_to_time(rxBuff[5]);
-  time_now.year = rawdata_to_time(rxBuff[6]) + 2000;
+  time_now.ss = bcd2bin(rxBuff[0]);
+  time_now.mm = bcd2bin(rxBuff[1]);
+  time_now.hh = bcd2bin(rxBuff[2]);
+  time_now.day = DAY( bcd2bin(rxBuff[3]) );
+  time_now.date = bcd2bin(rxBuff[4]);
+  time_now.month = bcd2bin(rxBuff[5]);
+  time_now.year = bcd2bin(rxBuff[6]) + 2000;
 
   return time_now;
 }
@@ -44,31 +65,27 @@ int DS3231_adjust_time(int fd) {
 
   t = time(NULL);
   tm = localtime(&t);
+
   txBuff[0] = DS3231_INIT_REG; // direccion inicial del registro a escribir
-  txBuff[1] = time_to_rawdata((uint8_t)tm->tm_sec);
-  txBuff[2] = time_to_rawdata((uint8_t)tm->tm_min);
-  txBuff[3] = time_to_rawdata((uint8_t)tm->tm_hour);
-  txBuff[4] = time_to_rawdata((uint8_t)(tm->tm_wday + 1));
-  txBuff[5] = time_to_rawdata((uint8_t)tm->tm_mday);
-  txBuff[6] = time_to_rawdata((uint8_t)(tm->tm_mon + 1));
-  txBuff[7] = time_to_rawdata((uint8_t)(tm->tm_year - 2000));
+  txBuff[1] = bin2bcd((uint8_t)tm->tm_sec);
+  txBuff[2] = bin2bcd((uint8_t)tm->tm_min);
+  txBuff[3] = bin2bcd((uint8_t)tm->tm_hour);
+  txBuff[4] = bin2bcd((uint8_t)(tm->tm_wday));
+  txBuff[5] = bin2bcd((uint8_t)tm->tm_mday);
+  txBuff[6] = bin2bcd((uint8_t)(tm->tm_mon + 1));
+  txBuff[7] = bin2bcd((uint8_t)(tm->tm_year - 100)); // -100 por como se ajusta el año en la struct tm
 
   size = write(fd, txBuff, 8);
-  printf("Enviados size = %d\n", size);
+
+  clear_OSF(fd);
 
   return (size > 0);
 }
 
-bool DS3231_isStopped(int fd) {
-  int size;
-  uint8_t txBuff[1] = {DS3231_STATUSREG};
-  uint8_t rxBuff[1];
+bool DS3231_lostPower(int fd) {
+  uint8_t rxBuff;
+  read_registers(fd, DS3231_STATUSREG, &rxBuff, 1);
+  printf("OSF: %d\n", rxBuff);
 
-  size = write(fd, txBuff, 1);
-  printf("Enviados size = %d\n", size);
-
-  size = read(fd, rxBuff, 1);
-  printf("Recibidos size = %d %d\n", size, rxBuff[0]);
-
-  return (rxBuff[0] >> 7);
+  return (rxBuff >> 7);
 }
