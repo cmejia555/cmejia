@@ -199,7 +199,6 @@ void chip_config_register(u32 addr, u32 value) {
 }
 
 void i2c_init(void __iomem * addr) {
-	//printk(KERN_ALERT "Configuracion Init\n");
 	iowrite32(I2C_DISABLE_MODULE, addr + I2C_REG_CON);
 	iowrite32(I2C_PRESCALE, addr + I2C_REG_PSC);
 	iowrite32(I2C_LOW_TIME_CLOCK, addr + I2C_REG_SCLL);

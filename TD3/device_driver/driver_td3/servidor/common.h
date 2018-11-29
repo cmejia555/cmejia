@@ -19,7 +19,7 @@
 #define MAX_CONNECTIONS   10
 
 #define MAX_STRING    50
-#define TIME_OUT      50
+#define TIME_OUT      1000
 
 typedef struct {
   int child_cont;

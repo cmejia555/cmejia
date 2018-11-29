@@ -109,8 +109,6 @@ int child_process(int fd, int semid)
   fcntl(fd, F_SETFL, flag);*/
   msgLen = recv(fd, &request_time, sizeof(int), 0); // wait for request time set
   if(msgLen == -1) {
-    printf("ERRNO %d\n", errno);
-    perror("recv()");
     properly_shutdown("recv()", EXIT_FAILURE);
   }
   printf("Recibido del hijo: request time = %d\n", request_time);
