@@ -1,0 +1,65 @@
+roberto@nb-rober:~$ python3.8 -m venv venv-dbase
+
+roberto@nb-rober:~$ . venv-dbase/bin/activate
+
+(venv-dbase) roberto@nb-rober:~$ cd utn-dbase/01_demo_import/
+
+(venv-dbase) roberto@nb-rober:~/utn-dbase/01_demo_import$ python modulito.py 
+la variable __name__ vale __main__
+hola, desde main
+
+(venv-dbase) roberto@nb-rober:~/utn-dbase/01_demo_import$ python
+Python 3.8.5 (default, Sep  9 2020, 18:41:14) 
+[GCC 5.4.0 20160609] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import modulito
+la variable __name__ vale modulito
+
+>>> dir(modulito)
+['__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'hola']
+
+>>> modulito.__name__
+'modulito'
+
+>>> modulito.__file__
+'/home/roberto/utn-dbase/01_demo_import/modulito.py'
+
+>>> modulito.__doc__
+'Este archivo sirve para mostrar la diferencia entre\n"importar" un modulo y usarlo como un script ejecutable\n'
+
+>>> print(modulito.__doc__)
+Este archivo sirve para mostrar la diferencia entre
+"importar" un modulo y usarlo como un script ejecutable
+
+>>> help(modulito)
+
+Help on module modulito:
+
+NAME
+    modulito
+
+DESCRIPTION
+    Este archivo sirve para mostrar la diferencia entre
+    "importar" un modulo y usarlo como un script ejecutable
+
+FUNCTIONS
+    hola(nombre)
+        imprime "hola, <nombre>"
+        
+        <nombre> debe ser un string
+
+FILE
+    /home/roberto/utn-dbase/01_demo_import/modulito.py
+
+(END)
+
+>>> modulito.hola
+<function hola at 0x7f56d79a8430>
+
+>>> modulito.hola('mundo!')
+hola, mundo!
+
+>>> ^D
+
+(venv-dbase) roberto@nb-rober:~/utn-dbase/01_demo_import$ 
+

@@ -1,0 +1,27 @@
+Ingresar a mysql como usuario root
+
+Para crear el usuario 'guest' con password 'guest':
+> CREATE USER 'guest'@'localhost' IDENTIFIED BY 'guest';
+
+y darle permisos para acceder a la Chinook:
+> GRANT ALL PRIVILEGES ON Chinook.* TO 'guest'@'localhost';
+> FLUSH PRIVILEGES;
+
+Salir de mysql;
+> exit
+
+Después ingresar de nuevo a mysql como 'guest':
+$ mysql -u guest -p
+Enter password:
+
+> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| Chinook            |
++--------------------+
+2 rows in set (0.00 sec)
+
+Debería estar la Chinook!
+

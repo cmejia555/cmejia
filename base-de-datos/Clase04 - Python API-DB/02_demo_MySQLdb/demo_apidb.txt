@@ -1,0 +1,193 @@
+(venv-dbase) roberto@nb-rober:~/utn-dbase/01_demo_import$ python
+Python 3.8.5 (default, Sep  9 2020, 18:41:14) 
+[GCC 5.4.0 20160609] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+
+>>> import MySQLdb as m
+
+>>> m
+<module 'MySQLdb' from '/home/roberto/venv-dbase/lib/python3.8/site-packages/MySQLdb/__init__.py'>
+
+>>> dir(m)
+['BINARY', 'Binary', 'Connect', 'Connection', 'DATE', 'DATETIME', 'DBAPISet', 'DataError', 'DatabaseError', 'Date', 'DateFromTicks', 'Error', 'FIELD_TYPE', 'IntegrityError', 'InterfaceError', 'InternalError', 'MySQLError', 'NULL', 'NUMBER', 'NotSupportedError', 'OperationalError', 'PY2', 'ProgrammingError', 'ROWID', 'STRING', 'TIME', 'TIMESTAMP', 'Time', 'TimeFromTicks', 'Timestamp', 'TimestampFromTicks', 'Warning', '__all__', '__author__', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__path__', '__revision__', '__spec__', '__version__', '_mysql', 'apilevel', 'compat', 'connect', 'connection', 'constants', 'debug', 'escape', 'escape_dict', 'escape_sequence', 'escape_string', 'get_client_info', 'paramstyle', 'release', 'result', 'server_end', 'server_init', 'string_literal', 'test_DBAPISet_set_equality', 'test_DBAPISet_set_equality_membership', 'test_DBAPISet_set_inequality', 'test_DBAPISet_set_inequality_membership', 'thread_safe', 'threadsafety', 'times', 'version_info']
+
+>>> help(m)
+
+>>> conn = m.connect(host='localhost', user='guest', password='guest', db='Chinook')
+
+>>> conn
+<_mysql.connection open to 'localhost' at 9e27764>
+
+>>> dir(conn)
+['DataError', 'DatabaseError', 'Error', 'IntegrityError', 'InterfaceError', 'InternalError', 'NotSupportedError', 'OperationalError', 'ProgrammingError', 'Warning', '__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__enter__', '__eq__', '__exit__', '__format__', '__ge__', '__getattribute__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__str__', '__subclasshook__', '__weakref__', '_server_version', '_transactional', 'affected_rows', 'autocommit', 'begin', 'change_user', 'character_set_name', 'client_flag', 'close', 'commit', 'converter', 'cursor', 'cursorclass', 'default_cursor', 'dump_debug_info', 'encoders', 'encoding', 'errno', 'error', 'errorhandler', 'escape', 'escape_string', 'field_count', 'fileno', 'get_autocommit', 'get_character_set_info', 'get_host_info', 'get_proto_info', 'get_server_info', 'info', 'insert_id', 'kill', 'literal', 'messages', 'next_result', 'open', 'ping', 'port', 'query', 'read_query_result', 'rollback', 'select_db', 'send_query', 'server_capabilities', 'set_character_set', 'set_server_option', 'set_sql_mode', 'show_warnings', 'shutdown', 'sqlstate', 'stat', 'store_result', 'string_decoder', 'string_literal', 'thread_id', 'unicode_literal', 'use_result', 'waiter', 'warning_count']
+
+>>> help(conn)
+
+>>> help(conn.cursor)
+
+>>> cur = conn.cursor()
+
+>>> cur.execute("SELECT * FROM Artist")
+275L
+
+>>> cur.fetchone()
+(1L, 'AC/DC')
+
+>>> cur.fetchone()
+(2L, 'Accept')
+ 
+>>> cur.fetchone()
+(3L, 'Aerosmith')
+
+>>> cur.fetchmany(5)
+((4L, 'Alanis Morissette'), (5L, 'Alice In Chains'), (6L, 'Ant\xf4nio Carlos Jobim'), (7L, 'Apocalyptica'), (8L, 'Audioslave'))
+ 
+>>> cur.fetchall()
+((9L, 'BackBeat'), (10L, 'Billy Cobham'), ... (275L, 'Philip Glass Ensemble'))
+
+>>> cur.fetchone()
+ 
+>>> cur.execute("SELECT * FROM Artist")
+275L
+ 
+>>> cur.rowcount
+275L
+ 
+>>> for artist in cur.fetchmany(10):
+...     print artist
+... 
+(1L, 'AC/DC')
+(2L, 'Accept')
+(3L, 'Aerosmith')
+(4L, 'Alanis Morissette')
+(5L, 'Alice In Chains')
+(6L, 'Ant\xf4nio Carlos Jobim')
+(7L, 'Apocalyptica')
+(8L, 'Audioslave')
+(9L, 'BackBeat')
+(10L, 'Billy Cobham')
+ 
+>>> for artist in cur.fetchmany(10):
+...     print(artist[1])
+... 
+Black Label Society
+Black Sabbath
+Body Count
+Bruce Dickinson
+Buddy Guy
+Caetano Veloso
+Chico Buarque
+Chico Science & Na��o Zumbi
+Cidade Negra
+Cl�udio Zoli
+ 
+>>> cur.execute("SELECT Name FROM Artist")
+275L
+
+>>> artists = [artist[0] for artist in cur.fetchall()]
+
+>>> for a in artists:
+...     print(a)
+... 
+AC/DC
+Accept
+Aerosmith
+Alanis Morissette
+...
+C. Monteverdi, Nigel Rogers - Chiaroscuro; London Baroque; London Cornett & Sackbu
+Nash Ensemble
+Philip Glass Ensemble
+ 
+>>> artists.sort()
+
+>>> for a in artists:
+...     print(a)
+... 
+A Cor Do Som
+AC/DC
+Aaron Copland & London Symphony Orchestra
+Aaron Goldberg
+...
+Yehudi Menuhin
+Yo-Yo Ma
+Youssou N'Dour
+Zeca Pagodinho
+ 
+>>> artists.reverse()
+
+>>> for a in artists:
+...     print(a)
+... 
+Zeca Pagodinho
+Youssou N'Dour
+Yo-Yo Ma
+...
+Aaron Copland & London Symphony Orchestra
+AC/DC
+A Cor Do Som
+ 
+>>> artists.sort()
+ 
+>>> artists[:5]
+['A Cor Do Som', 'AC/DC', 'Aaron Copland & London Symphony Orchestra', 'Aaron Goldberg', 'Academy of St. Martin in the Fields & Sir Neville Marriner']
+ 
+>>> artists[-5:]
+['Xis', 'Yehudi Menuhin', 'Yo-Yo Ma', "Youssou N'Dour", 'Zeca Pagodinho']
+ 
+>>> artists[2:4]
+['Aaron Copland & London Symphony Orchestra', 'Aaron Goldberg']
+ 
+>>> artists[14:20:2]
+['Alanis Morissette', 'Alice In Chains', 'Anne-Sophie Mutter, Herbert Von Karajan & Wiener Philharmoniker']
+ 
+>>> artists[14:20:1]
+['Alanis Morissette', 'Alberto Turco & Nova Schola Gregoriana', 'Alice In Chains', 'Amy Winehouse', 'Anne-Sophie Mutter, Herbert Von Karajan & Wiener Philharmoniker', 'Antal Dor\xe1ti & London Symphony Orchestra']
+ 
+>>> cur.close()
+
+>>> conn.close()
+
+
+>>> conn = m.connect(host='localhost', user='guest', passwd='guest', db='Chinook')
+
+>>> cur = conn.cursor(cursorclass=m.cursors.DictCursor)
+ 
+>>> cur
+<MySQLdb.cursors.DictCursor object at 0xb71e584c>
+ 
+>>> cur.execute("SELECT * FROM Artist")
+275L
+ 
+>>> cur.fetchone()
+{'ArtistId': 1L, 'Name': 'AC/DC'}
+ 
+>>> a = cur.fetchone()
+
+>>> a
+{'ArtistId': 2L, 'Name': 'Accept'}
+
+>>> a.keys()
+['ArtistId', 'Name']
+
+>>> a['Name']
+'Accept'
+ 
+>>> for artist in cur.fetchmany(5):
+...     print(artist['Name'])
+... 
+Aerosmith
+Alanis Morissette
+Alice In Chains
+Ant�nio Carlos Jobim
+Apocalyptica
+ 
+>>> artists = [a['Name'] for a in cur.fetchmany(5)]
+
+>>> artists
+['Audioslave', 'BackBeat', 'Billy Cobham', 'Black Label Society', 'Black Sabbath']
+
+>>> cur.close()
+
+>>> conn.close()
+
+>>> ^D
